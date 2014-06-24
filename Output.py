@@ -91,14 +91,14 @@ class Output(FastRadialFeatureFinder):
         features['restrict_left'] = self.restrict_left
         features['restrict_right'] = self.restrict_right
 
-        if self.return_sobel:
+      #  if self.return_sobel:
             # this is very inefficient, and only for debugging
-            (m, x, y) = self.backend.sobel3x3(im_array)
-            features['sobel'] = m
+       #    (m, x, y) = self.backend.sobel3x3(im_array)
+       #    features['sobel'] = m
 
-        self.result = features
+       #self.result = features
         
-        return pupil_coords
+       # return pupil_coords
 
 
 
