@@ -11,6 +11,7 @@ from threading import Thread
 
 pipe_name = '/Users/Intern/Documents/pipe_eye.txt'
 #restore_sigpipe = True
+queue_length = 3
 
 class Output(FastRadialFeatureFinder):
     def analysis(self, image, guess=None, **kwargs):
@@ -90,10 +91,10 @@ class Output(FastRadialFeatureFinder):
         features['restrict_left'] = self.restrict_left
         features['restrict_right'] = self.restrict_right
 
-      #  if self.return_sobel:
-      # """ this is very inefficient, and only for debugging """
-      #      (m, x, y) = self.backend.sobel3x3(im_array)
-      #     features['sobel'] = mso
+        if self.return_sobel:
+            # this is very inefficient, and only for debugging
+            (m, x, y) = self.backend.sobel3x3(im_array)
+            features['sobel'] = m
 
         self.result = features
         
@@ -122,23 +123,27 @@ class ImageInformation(PipelinedWorker):
             features["transform"] = None
             features["im_array"] = None
     
-            # pickle the structure manually, Queue doesn't seem to do the
+            # pickle the structure manually, because Queue doesn't seem to do the
             # job correctly
             output_queue.put(pickle.dumps(features))
             
             return (im, guess)
 
-    def child(self):
+    def child():
         
         pipeout = os.open(pipe_name, os.O_WRONLY)
         out_analysis = Output()
-        data = ImageInformation(None,image_queue) 
-        self.image_queue = Queue.Queue()  
+        image_queue = Queue.Queue()  
+        worker = PipelinedWorkerProcessManager(queue_length) 
+        output_queues = []
+        output_queues.append(worker.output_queue)
+        data = ImageInformation(None,image_queue,output_queues)
+        
         
         while True:
             
             time.sleep(1)
-            (im, guess) = data.worker_loop(None,image_queue)
+            (im, guess) = data.worker_loop(None,image_queue,output_queues)
             pupil_coords = out_analysis.analysis(im, guess)
             os.write(pipeout, '%d , %d \n' % (pupil_coords[0], pupil_coords[1]))
             
@@ -149,8 +154,6 @@ class ImageInformation(PipelinedWorker):
     
         if not os.path.exists(pipe_name):
             os.mkfifo(pipe_name)
-        
-        
         
         
     t = Thread(target=child)
